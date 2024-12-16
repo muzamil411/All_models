@@ -1,0 +1,6 @@
+Flask
+xgboost
+numpy
+scikit-learn
+vercel-python-utils
+gunicorn
