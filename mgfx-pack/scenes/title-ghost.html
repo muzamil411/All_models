@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../lib/base.css" />
+    <script src="../lib/engine.js"></script>
+    <style>
+      .stage {
+        display: grid;
+        place-items: center;
+      }
+      .ghost {
+        font-family: "Montserrat", sans-serif;
+        font-weight: 800;
+        color: var(--ink);
+        text-transform: uppercase;
+        white-space: nowrap;
+        will-change: transform, opacity, letter-spacing;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div class="ghost" id="ghost"></div>
+    </div>
+
+    <script>
+      /*
+       * Oversized ghosted title — the "48 HOURS" treatment at 0:33.
+       * Render this on its own layer and mask the subject's head over it in the
+       * NLE; that occlusion is what stops it reading as a flat overlay.
+       */
+      const P = params({
+        text: "48 HOURS",
+        sizePx: 240,
+        opacity: 0.32,
+        duration: 2.6,
+      });
+
+      const ghost = document.getElementById("ghost");
+      ghost.textContent = P.text;
+      ghost.style.fontSize = P.sizePx + "px";
+
+      defineScene({
+        fps: 30,
+        duration: P.duration,
+        seek(t) {
+          // Slow tracking expansion + scale drift: reads as pressure, not motion.
+          const p = anim(t, 0, P.duration, "linear");
+          ghost.style.letterSpacing = `${(0.02 + p * 0.05).toFixed(4)}em`;
+          ghost.style.transform = `scale(${(1 + p * 0.06).toFixed(4)})`;
+          ghost.style.opacity = (
+            P.opacity * anim(t, 0, 0.25, "cubicOut") * (1 - anim(t, P.duration - 0.35, 0.35, "cubicOut"))
+          ).toFixed(4);
+        },
+      });
+    </script>
+  </body>
+</html>

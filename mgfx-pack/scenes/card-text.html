@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../lib/base.css" />
+    <script src="../lib/engine.js"></script>
+    <style>
+      .ground {
+        position: absolute;
+        inset: 0;
+        background: #07070e;
+      }
+      .blob {
+        position: absolute;
+        border-radius: 50%;
+        /* Heavy blur + low opacity: the reference cards are near-black with a
+           hint of colour, not a saturated gradient. */
+        filter: blur(240px);
+        opacity: 0.42;
+        will-change: transform;
+      }
+      .content {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 46px;
+        font-family: "Poppins", sans-serif;
+      }
+      .headline {
+        font-weight: 800;
+        font-style: italic;
+        font-size: 82px;
+        color: var(--ink);
+        text-align: center;
+        letter-spacing: -0.015em;
+        will-change: transform, opacity;
+      }
+      .bullets {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 26px;
+      }
+      .bullet {
+        font-weight: 600;
+        font-style: italic;
+        font-size: 46px;
+        color: #e8e8f2;
+        will-change: transform, opacity;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div class="ground" id="ground">
+        <div class="blob" id="b1"></div>
+        <div class="blob" id="b2"></div>
+      </div>
+      <div class="content">
+        <div class="headline hard-shadow" id="headline"></div>
+        <div class="bullets" id="bullets"></div>
+      </div>
+    </div>
+
+    <script>
+      /*
+       * Full-frame text card: italic bold headline over drifting blurred blobs,
+       * bullets staggering in behind it. This one MOGRT covers every card in the
+       * reference — "Why Ebooks?", "Our Target Audience", "Some Other Key Stats".
+       */
+      const P = params({
+        headline: "Some Other Key Stats:",
+        bullets: ["- We Had 270 Website Views", "- We Got 4 Buyers"],
+        bulletColors: [],
+        accent: "#7C4DFF",
+        opaque: true, // false renders the card over transparency for overlay use
+        duration: 3.2,
+      });
+
+      const ground = document.getElementById("ground");
+      const headline = document.getElementById("headline");
+      const bulletBox = document.getElementById("bullets");
+
+      if (!P.opaque) ground.style.background = "transparent";
+      document.getElementById("b1").style.background = P.accent;
+      document.getElementById("b2").style.background = "#E040FB";
+
+      headline.textContent = P.headline;
+      const bulletEls = P.bullets.map((text, i) => {
+        const el = document.createElement("div");
+        el.className = "bullet";
+        el.textContent = text;
+        if (P.bulletColors[i]) el.style.color = P.bulletColors[i];
+        bulletBox.appendChild(el);
+        return el;
+      });
+
+      const b1 = document.getElementById("b1");
+      const b2 = document.getElementById("b2");
+      b1.style.width = b1.style.height = "900px";
+      b2.style.width = b2.style.height = "760px";
+
+      defineScene({
+        fps: 30,
+        duration: P.duration,
+        seek(t) {
+          // Blobs drift continuously — slow enough to read as ambient, not motion.
+          b1.style.transform = `translate(${(120 + Math.sin(t * 0.5) * 90).toFixed(1)}px, ${(
+            60 + Math.cos(t * 0.37) * 70
+          ).toFixed(1)}px)`;
+          b2.style.transform = `translate(${(1000 + Math.cos(t * 0.43) * 110).toFixed(1)}px, ${(
+            420 + Math.sin(t * 0.61) * 80
+          ).toFixed(1)}px)`;
+
+          // Headline: scale 94 -> 100 with an ease-out, opacity ramping alongside.
+          headline.style.opacity = anim(t, 0.05, 0.35, "cubicOut");
+          headline.style.transform = `scale(${tween(t, 0.05, 0.5, 0.94, 1, "expoOut").toFixed(4)})`;
+
+          // Bullets stagger 0.15s apart, each rising 18px into place.
+          bulletEls.forEach((el, i) => {
+            const start = 0.45 + i * 0.15;
+            el.style.opacity = anim(t, start, 0.3, "cubicOut");
+            el.style.transform = `translateY(${tween(t, start, 0.55, 18, 0, "expoOut").toFixed(2)}px)`;
+          });
+        },
+      });
+    </script>
+  </body>
+</html>

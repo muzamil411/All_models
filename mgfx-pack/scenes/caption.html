@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../lib/base.css" />
+    <script src="../lib/engine.js"></script>
+    <style>
+      .cap {
+        position: absolute;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-family: "Montserrat", sans-serif;
+        font-weight: 800;
+        color: var(--ink);
+        text-transform: uppercase;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        will-change: transform, opacity;
+      }
+      .cap .word {
+        display: inline-block;
+      }
+      .sticker {
+        position: absolute;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 64px;
+        line-height: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div class="cap" id="cap"></div>
+      <div class="sticker" id="sticker"></div>
+    </div>
+
+    <script>
+      /*
+       * Word-by-word captions, styled after the reference: 1-3 words, all caps,
+       * heavy geometric sans, white with a hard shadow, centred at ~72% height.
+       * Words SNAP in with no fade — that hard cut between words is what makes
+       * the pace read as fast. Do not add an opacity ramp here.
+       */
+      const P = params({
+        // Each cue: { start, end, text, emphasis?, color?, sticker? }
+        cues: [
+          { start: 0.0, end: 0.42, text: "THIS" },
+          { start: 0.42, end: 0.84, text: "IS HOW" },
+          { start: 0.84, end: 1.4, text: "IT LOOKS", emphasis: true },
+          { start: 1.4, end: 2.0, text: "IN MOTION", sticker: "💡" },
+        ],
+        sizePx: 78,
+        baselinePct: 72,
+        duration: 2.2,
+      });
+
+      const cap = document.getElementById("cap");
+      const sticker = document.getElementById("sticker");
+      cap.style.fontSize = P.sizePx + "px";
+      cap.style.top = P.baselinePct + "%";
+      sticker.style.top = P.baselinePct - 7 + "%";
+
+      function activeCue(t) {
+        return P.cues.find((c) => t >= c.start && t < c.end) || null;
+      }
+
+      defineScene({
+        fps: 30,
+        duration: P.duration,
+        seek(t) {
+          const cue = activeCue(t);
+          if (!cue) {
+            cap.style.opacity = 0;
+            sticker.style.opacity = 0;
+            return;
+          }
+          cap.style.opacity = 1;
+          cap.textContent = cue.text;
+          cap.style.color = cue.color || "var(--ink)";
+          cap.className = "cap hard-shadow";
+
+          // Emphasis words get a 3-frame pop (scale 1 -> 1.12 -> 1), nothing else.
+          const local = t - cue.start;
+          const pop = cue.emphasis ? 1 + 0.12 * (1 - anim(local, 0, 0.16, "cubicOut")) : 1;
+          cap.style.transform = `translateY(-50%) scale(${pop.toFixed(4)})`;
+
+          if (cue.sticker) {
+            sticker.style.opacity = 1;
+            sticker.textContent = cue.sticker;
+            const s = tween(local, 0, 0.13, 0, 1, "backOut");
+            sticker.style.transform = `translateY(-50%) scale(${s.toFixed(4)})`;
+          } else {
+            sticker.style.opacity = 0;
+          }
+        },
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,66 @@
+/* Shared tokens and font faces. Fonts are local files — nothing is fetched. */
+
+@font-face {
+  font-family: "Poppins";
+  src: url("../node_modules/@fontsource/poppins/files/poppins-latin-800-normal.woff2") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("../node_modules/@fontsource/poppins/files/poppins-latin-800-italic.woff2") format("woff2");
+  font-weight: 800;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("../node_modules/@fontsource/poppins/files/poppins-latin-600-normal.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("../node_modules/@fontsource/poppins/files/poppins-latin-600-italic.woff2") format("woff2");
+  font-weight: 600;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Montserrat";
+  src: url("../node_modules/@fontsource/montserrat/files/montserrat-latin-800-normal.woff2") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+}
+
+:root {
+  --violet: #7c4dff;
+  --violet-deep: #4a1fd6;
+  --magenta: #e040fb;
+  --cyan: #22d3ee;
+  --red: #e23a45;
+  --ink: #ffffff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: transparent; /* required for alpha screenshots */
+}
+
+.stage {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+}
+
+/* The caption shadow from the reference: tight, hard, no glow. */
+.hard-shadow {
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.55), 0 2px 12px rgba(0, 0, 0, 0.45);
+}
