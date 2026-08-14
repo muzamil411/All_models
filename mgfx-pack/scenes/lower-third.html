@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../lib/base.css" />
+    <script src="../lib/engine.js"></script>
+    <style>
+      .lt {
+        position: absolute;
+        left: 96px;
+        top: 62%;
+        font-family: "Poppins", sans-serif;
+      }
+      .head {
+        font-weight: 800;
+        font-style: italic;
+        font-size: 52px;
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        width: 0;
+      }
+      .body {
+        font-weight: 600;
+        font-style: italic;
+        font-size: 34px;
+        color: #eef0ff;
+        margin-top: 10px;
+        white-space: pre;
+        min-height: 46px;
+      }
+      .bar {
+        height: 4px;
+        margin-top: 16px;
+        width: 0;
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div class="lt">
+        <div class="head hard-shadow" id="head"></div>
+        <div class="body hard-shadow" id="body"></div>
+        <div class="bar" id="bar"></div>
+      </div>
+    </div>
+
+    <script>
+      /*
+       * Challenge lower third. Headline reveals by mask wipe, body types on
+       * character by character, a bar underlines it. In the reference this
+       * appears in teal at 0:27 and returns in magenta at 12:02 — same MOGRT,
+       * one colour field changed.
+       */
+      const P = params({
+        head: "This Video's Challenge:",
+        body: "Make a sale on a brand new\nAI digital product",
+        accent: "#22D3EE",
+        duration: 3.4,
+      });
+
+      const head = document.getElementById("head");
+      const body = document.getElementById("body");
+      const bar = document.getElementById("bar");
+      head.textContent = P.head;
+      head.style.color = P.accent;
+      bar.style.background = P.accent;
+      bar.style.boxShadow = `0 0 24px ${P.accent}`;
+
+      defineScene({
+        fps: 30,
+        duration: P.duration,
+        seek(t) {
+          // Wipe: the headline's own box grows, so the text is revealed, not scaled.
+          head.style.width = `${(anim(t, 0, 0.55, "expoOut") * 100).toFixed(2)}%`;
+
+          // Type-on: characters appear one at a time after the wipe lands.
+          const chars = Math.floor(anim(t, 0.5, 1.1, "linear") * P.body.length);
+          body.textContent = P.body.slice(0, chars);
+
+          bar.style.width = `${(anim(t, 0.35, 0.6, "expoOut") * 420).toFixed(1)}px`;
+        },
+      });
+    </script>
+  </body>
+</html>

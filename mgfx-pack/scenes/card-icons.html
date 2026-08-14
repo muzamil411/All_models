@@ -1,0 +1,159 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../lib/base.css" />
+    <script src="../lib/engine.js"></script>
+    <style>
+      .ground {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 50% 62%, #2a0f5e 0%, #0b0616 62%, #07070e 100%);
+      }
+      .content {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 62px;
+        font-family: "Poppins", sans-serif;
+      }
+      .title {
+        font-weight: 800;
+        font-style: italic;
+        font-size: 58px;
+        color: var(--ink);
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      .row {
+        display: flex;
+        gap: 46px;
+      }
+      .tile {
+        width: 190px;
+        height: 190px;
+        border-radius: 34px;
+        display: grid;
+        place-items: center;
+        will-change: transform, opacity;
+      }
+      .tile svg {
+        width: 96px;
+        height: 96px;
+      }
+      .tile svg path,
+      .tile svg rect,
+      .tile svg circle,
+      .tile svg polyline,
+      .tile svg line {
+        fill: none;
+        stroke: #ffffff;
+        stroke-width: 5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .frame {
+        position: absolute;
+        inset: 0;
+        border-radius: 34px;
+        border: 3px solid rgba(190, 150, 255, 0.95);
+        box-shadow: 0 0 34px rgba(124, 77, 255, 0.55), inset 0 0 22px rgba(124, 77, 255, 0.25);
+      }
+      .tilewrap {
+        position: relative;
+        width: 190px;
+        height: 190px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div class="ground"></div>
+      <div class="content">
+        <div class="title hard-shadow" id="title"></div>
+        <div class="row" id="row"></div>
+      </div>
+    </div>
+
+    <script>
+      /*
+       * Neon icon card. Each tile's border draws on (stroke-dashoffset), then the
+       * glyph scales in behind it, staggered 0.15s apart — one tick of SFX per tile.
+       */
+      const ICONS = {
+        ebook:
+          '<rect x="12" y="14" width="76" height="72" rx="6"/><line x1="50" y1="14" x2="50" y2="86"/><line x1="24" y1="34" x2="40" y2="34"/><line x1="60" y1="34" x2="76" y2="34"/>',
+        templates:
+          '<rect x="10" y="26" width="56" height="60" rx="6"/><path d="M26 26V14a4 4 0 0 1 4-4h56a4 4 0 0 1 4 4v56a4 4 0 0 1-4 4H74"/>',
+        video:
+          '<rect x="10" y="20" width="80" height="60" rx="8"/><path d="M42 38l22 12-22 12z"/>',
+        app: '<path d="M50 12l38 66H12z"/><circle cx="50" cy="58" r="8"/>',
+        chart:
+          '<polyline points="14,74 38,48 56,62 86,26"/><line x1="14" y1="86" x2="86" y2="86"/>',
+        rocket:
+          '<path d="M50 10c16 12 24 30 24 48l-10 12H36L26 58c0-18 8-36 24-48z"/><circle cx="50" cy="44" r="9"/>',
+      };
+
+      const P = params({
+        title: "4 Best Digital Products To Build in 2026",
+        icons: ["ebook", "templates", "video", "app"],
+        duration: 3.6,
+      });
+
+      const titleEl = document.getElementById("title");
+      const row = document.getElementById("row");
+      titleEl.textContent = P.title;
+
+      const tiles = P.icons.map((name) => {
+        const wrap = document.createElement("div");
+        wrap.className = "tilewrap";
+        const frame = document.createElement("div");
+        frame.className = "frame";
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        tile.innerHTML = `<svg viewBox="0 0 100 100">${ICONS[name] || ICONS.ebook}</svg>`;
+        wrap.appendChild(frame);
+        wrap.appendChild(tile);
+        row.appendChild(wrap);
+
+        // Measure each stroke so it can be drawn on from zero length.
+        const strokes = [...tile.querySelectorAll("svg > *")].map((el) => {
+          const len = el.getTotalLength ? el.getTotalLength() : 300;
+          el.style.strokeDasharray = len;
+          return { el, len };
+        });
+        return { wrap, frame, tile, strokes };
+      });
+
+      defineScene({
+        fps: 30,
+        duration: P.duration,
+        seek(t) {
+          // Title wipes on left-to-right. clip-path (not width) so the element
+          // keeps its measured size and stays centred while it reveals.
+          const wipe = anim(t, 0, 0.7, "cubicOut");
+          titleEl.style.clipPath = `inset(-20% ${((1 - wipe) * 100).toFixed(2)}% -20% -2%)`;
+          titleEl.style.opacity = anim(t, 0, 0.15, "linear");
+
+          tiles.forEach((tile, i) => {
+            const start = 0.55 + i * 0.15;
+            const p = anim(t, start, 0.42, "expoOut");
+            tile.wrap.style.opacity = anim(t, start, 0.18, "linear");
+            tile.frame.style.transform = `scale(${(0.82 + 0.18 * p).toFixed(4)})`;
+
+            // Glyph draws on just behind its frame.
+            const draw = anim(t, start + 0.12, 0.5, "cubicOut");
+            tile.strokes.forEach((s) => {
+              s.el.style.strokeDashoffset = (s.len * (1 - draw)).toFixed(2);
+            });
+            tile.tile.style.transform = `scale(${tween(t, start + 0.1, 0.45, 0.86, 1, "backOut").toFixed(4)})`;
+          });
+        },
+      });
+    </script>
+  </body>
+</html>

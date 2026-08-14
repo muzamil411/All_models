@@ -1,0 +1,24 @@
+{
+  "channel": "Your Channel",
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "color": {
+    "violet": "#7C4DFF",
+    "violetDeep": "#4A1FD6",
+    "magenta": "#E040FB",
+    "cyan": "#22D3EE",
+    "red": "#E23A45",
+    "ink": "#FFFFFF",
+    "ground": "#07070E"
+  },
+  "type": {
+    "display": "Poppins",
+    "caption": "Montserrat"
+  },
+  "caption": {
+    "sizePx": 78,
+    "baselinePct": 72,
+    "trackingEm": 0.01
+  }
+}
