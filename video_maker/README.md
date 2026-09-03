@@ -41,11 +41,12 @@ on its beat). `duration` is derived from the reveal schedule unless you set it.
 |---|---|
 | `background.py` | Paints the dusk city street, then crops it per frame for the Ken Burns move |
 | `character.py` | Draws the avatar and renders a 90-frame pose loop once, reused for the whole video |
-| `audio.py` | Synthesises the pad, arpeggio and reveal chimes with numpy |
+| `audio.py` | Synthesises the pad, arpeggio and reveal chimes, then mixes the voiceover over them |
 | `make_video.py` | Lays out the text and chrome, composites every frame, pipes to ffmpeg |
 
-Nothing is downloaded at render time — no stock footage, no fonts to install
-beyond Liberation Sans, no API keys.
+Nothing is downloaded at render time. The voiceover clips in `voice/` are
+committed, so a render needs no network and no API key — see below for
+regenerating them.
 
 ## Swapping the flag
 
@@ -53,16 +54,25 @@ beyond Liberation Sans, no API keys.
 that function with one that draws the flag you want (or load a PNG and skip the
 drawing); `badge()` handles the rounded corners, ring and drop shadow either way.
 
-## Adding a voiceover
+## Voiceover
 
-The renderer has no TTS — this environment has no speech engine and no network.
-To add narration, generate one clip per phrase and mix them in at the reveal
-times, which `load_content()` already computes as `content["reveals"]`:
+The clips in `voice/` were generated with ElevenLabs (voice *Alice - Clear,
+Engaging Educator*, model `eleven_multilingual_v2`) and are committed so renders
+stay reproducible. The content file schedules them:
 
-```python
-# after audio.build(...), before the mux
-# overlay each voice clip at reveals[i] and write a combined wav
+```json
+"voice": {
+  "intro": {"file": "voice/intro.mp3", "at": 1.5},
+  "reveal_offset": 0.12,
+  "files": ["voice/p1.mp3", "voice/p2.mp3", "voice/p3.mp3", "voice/p4.mp3", "voice/p5.mp3"]
+}
 ```
 
-ElevenLabs gives the most natural result; TikTok's own text-to-speech is free and
-fast if you would rather add it in the app after uploading.
+`files` lines up with `pairs`, and each clip plays `reveal_offset` seconds after
+its word appears, so the viewer reads it a beat before hearing it. `audio.py`
+ducks the music bed under the narration automatically, so no manual level
+balancing is needed.
+
+To voice a new set of phrases, render one clip per phrase, drop them in `voice/`,
+and point `files` at them. Drop the whole `"voice"` key and the video renders
+with music only.

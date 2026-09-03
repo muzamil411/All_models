@@ -6,10 +6,40 @@
   "reveal_gap": 3.6,
   "bar_seconds": 4.2,
   "pairs": [
-    ["Salam", "Hello"],
-    ["Shukriya", "Thank You"],
-    ["Maaf Kijiye", "Excuse Me"],
-    ["Kaise Ho", "How Are You"],
-    ["Khuda Hafiz", "Goodbye"]
-  ]
+    [
+      "Salam",
+      "Hello"
+    ],
+    [
+      "Shukriya",
+      "Thank You"
+    ],
+    [
+      "Maaf Kijiye",
+      "Excuse Me"
+    ],
+    [
+      "Kaise Ho",
+      "How Are You"
+    ],
+    [
+      "Khuda Hafiz",
+      "Goodbye"
+    ]
+  ],
+  "voice": {
+    "note": "Generated with ElevenLabs (voice: Alice - Clear, Engaging Educator, eleven_multilingual_v2).",
+    "intro": {
+      "file": "voice/intro.mp3",
+      "at": 1.5
+    },
+    "reveal_offset": 0.12,
+    "files": [
+      "voice/p1.mp3",
+      "voice/p2.mp3",
+      "voice/p3.mp3",
+      "voice/p4.mp3",
+      "voice/p5.mp3"
+    ]
+  }
 }

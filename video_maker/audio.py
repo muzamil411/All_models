@@ -1,9 +1,12 @@
 """Offline music bed for the video.
 
-No TTS engine or network is available in this environment, so the soundtrack is
-synthesised additively with numpy: a soft pad progression, a quiet arpeggio, and
-a bell that lands on each word reveal.
+The bed itself is synthesised additively with numpy - a soft pad progression, a
+quiet arpeggio, and a bell on each word reveal. Pre-rendered voiceover clips are
+mixed on top, and the bed ducks under them so the narration stays clear.
 """
+import subprocess
+
+import imageio_ffmpeg
 import numpy as np
 
 RATE = 44100
@@ -93,15 +96,52 @@ def _bell(duration, times):
     return out[:int(duration * RATE)]
 
 
-def build(duration, reveal_times, path):
-    """Render the bed to a 16-bit stereo WAV at `path`."""
-    mix = _pad(duration) * 0.52 + _arp(duration) * 0.22 + _bell(duration, reveal_times) * 0.40
+def load_clip(path):
+    """Decode any audio file to a mono float array at RATE, via ffmpeg."""
+    raw = subprocess.run(
+        [imageio_ffmpeg.get_ffmpeg_exe(), "-loglevel", "error", "-i", str(path),
+         "-ac", "1", "-ar", str(RATE), "-f", "f32le", "-"],
+        capture_output=True, check=True,
+    ).stdout
+    return np.frombuffer(raw, dtype="<f4").astype(np.float64)
+
+
+def _voice_bus(duration, clips):
+    """Lay the voiceover clips onto one track at their scheduled times."""
+    bus = np.zeros(int(duration * RATE))
+    for clip in clips:
+        audio = load_clip(clip["file"])
+        peak = np.abs(audio).max()
+        if peak > 0:
+            audio = audio / peak * clip.get("gain", 0.92)
+        _add(bus, int(clip["at"] * RATE), audio)
+    return bus
+
+
+def _duck(bus, depth=0.72, window=0.30):
+    """Gain curve for the music: dips wherever the voice bus has energy."""
+    win = int(window * RATE)
+    energy = np.convolve(np.abs(bus), np.ones(win) / win, mode="same")
+    if energy.max() > 0:
+        energy /= energy.max()
+    return 1.0 - depth * np.clip(energy * 2.2, 0, 1)
+
+
+def build(duration, reveal_times, path, voice=()):
+    """Render the bed - plus any voiceover - to a 16-bit stereo WAV at `path`."""
+    bed = _pad(duration) * 0.52 + _arp(duration) * 0.22 + _bell(duration, reveal_times) * 0.26
+
+    if voice:
+        bus = _voice_bus(duration, voice)
+        mix = bed * _duck(bus) * 0.85 + bus
+    else:
+        mix = bed
 
     fade = int(1.2 * RATE)
     mix[:fade] *= np.linspace(0, 1, fade)
     mix[-fade:] *= np.linspace(1, 0, fade)
     mix /= max(1e-6, np.abs(mix).max())
-    mix *= 0.72
+    mix *= 0.88
 
     # Widen: delay one channel by a few milliseconds.
     d = int(0.012 * RATE)
@@ -119,3 +159,4 @@ def build(duration, reveal_times, path):
 
 if __name__ == "__main__":
     build(23.4, [5.4, 9.0, 12.6, 16.2, 19.8], "out/_music.wav")
+

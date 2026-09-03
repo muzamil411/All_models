@@ -150,7 +150,30 @@ def load_content(path):
     gap = data.get("reveal_gap", 3.6)
     data["reveals"] = [reveal_at + i * gap for i in range(len(pairs))]
     data["duration"] = data.get("duration", data["reveals"][-1] + gap)
+    data["voice_track"] = voice_track(data)
     return data
+
+
+def voice_track(data):
+    """Schedule the voiceover clips: the intro on its own beat, then one clip
+    per reveal, nudged slightly late so the word lands before it is spoken."""
+    spec = data.get("voice")
+    if not spec:
+        return []
+
+    here = Path(__file__).parent
+    track = []
+    if spec.get("intro"):
+        track.append({"file": here / spec["intro"]["file"], "at": spec["intro"]["at"]})
+
+    offset = spec.get("reveal_offset", 0.12)
+    for reveal, name in zip(data["reveals"], spec.get("files", [])):
+        track.append({"file": here / name, "at": reveal + offset})
+
+    missing = [str(c["file"]) for c in track if not c["file"].exists()]
+    if missing:
+        raise SystemExit("voiceover clips not found:\n  " + "\n  ".join(missing))
+    return track
 
 
 def render(content, out_path, preview_only=None):
@@ -249,8 +272,9 @@ def main():
     silent = Path("out/_silent.mp4")
     render(content, silent)
 
-    print("synthesising music ...", flush=True)
-    wav = audio.build(content["duration"], content["reveals"], "out/_music.wav")
+    track = content["voice_track"]
+    print(f"mixing audio ({len(track)} voice clips) ...", flush=True)
+    wav = audio.build(content["duration"], content["reveals"], "out/_music.wav", voice=track)
 
     print("muxing ...", flush=True)
     subprocess.run(
