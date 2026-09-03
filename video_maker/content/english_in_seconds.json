@@ -1,0 +1,15 @@
+{
+  "title": "English in Seconds (Urdu)",
+  "note": "Column one is Roman Urdu (what the viewer already knows); column two is the English phrase being taught.",
+  "seed": 7,
+  "first_reveal": 5.4,
+  "reveal_gap": 3.6,
+  "bar_seconds": 4.2,
+  "pairs": [
+    ["Salam", "Hello"],
+    ["Shukriya", "Thank You"],
+    ["Maaf Kijiye", "Excuse Me"],
+    ["Kaise Ho", "How Are You"],
+    ["Khuda Hafiz", "Goodbye"]
+  ]
+}
