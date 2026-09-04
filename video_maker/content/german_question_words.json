@@ -1,0 +1,41 @@
+{
+  "title": "German Question Words",
+  "note": "Column one is the English the viewer already knows; column two is the German being taught. Each beat: the English cue, then the German word and an example sentence.",
+  "flag": "de",
+  "style": "canal",
+  "seed": 21,
+  "beat_bar": true,
+  "first_reveal": 6.0,
+  "reveal_gap": 5.3,
+  "outro_start": 56.4,
+  "duration": 70.0,
+  "pairs": [
+    ["Where", "Wo"],
+    ["When", "Wann"],
+    ["Why", "Warum"],
+    ["How", "Wie"],
+    ["What", "Was"],
+    ["Who", "Wer"],
+    ["How much", "Wie viel"],
+    ["Which", "Welche"],
+    ["How long", "Wie lange"],
+    ["Where from", "Woher"]
+  ],
+  "voice": {
+    "note": "ElevenLabs eleven_multilingual_v2. Cues and framing: Alice (British educator). German: Ava (native German).",
+    "intro": { "file": "voice_de/intro.mp3", "at": 0.3 },
+    "outro": { "file": "voice_de/outro.mp3", "at": 57.2 },
+    "cue_offset": -1.2,
+    "reveal_offset": 0.0,
+    "cues": [
+      "voice_de/en01.mp3", "voice_de/en02.mp3", "voice_de/en03.mp3", "voice_de/en04.mp3",
+      "voice_de/en05.mp3", "voice_de/en06.mp3", "voice_de/en07.mp3", "voice_de/en08.mp3",
+      "voice_de/en09.mp3", "voice_de/en10.mp3"
+    ],
+    "files": [
+      "voice_de/de01.mp3", "voice_de/de02.mp3", "voice_de/de03.mp3", "voice_de/de04.mp3",
+      "voice_de/de05.mp3", "voice_de/de06.mp3", "voice_de/de07.mp3", "voice_de/de08.mp3",
+      "voice_de/de09.mp3", "voice_de/de10.mp3"
+    ]
+  }
+}

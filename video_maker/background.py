@@ -97,7 +97,30 @@ def _road(draw, size, horizon_y):
         draw.line([(x0, horizon_y + 20), (x1, h)], fill=(126, 78, 52), width=3 + (i % 3) * 3)
 
 
-def _street_wall(draw, size, horizon_y, side, seed):
+def _canal(draw, size, horizon_y):
+    """Still water receding to the vanishing point, with banded reflections."""
+    w, h = size
+    draw.polygon(
+        [(w * 0.02, h), (w * 0.98, h), (w * 0.58, horizon_y), (w * 0.42, horizon_y)],
+        fill=(28, 40, 62),
+    )
+    # Horizontal ripple bands, wider and lighter as they come towards us.
+    for i in range(1, 34):
+        t = (i / 34) ** 2.1
+        y = horizon_y + (h - horizon_y) * t
+        left = w * 0.42 - (w * 0.40) * t
+        right = w * 0.58 + (w * 0.40) * t
+        shade = int(44 + 40 * t)
+        draw.line([(left, y), (right, y)], fill=(shade, shade + 14, shade + 34), width=int(2 + 5 * t))
+    # Warm lamplight smeared down the water.
+    for i in range(9):
+        s_ = 0.18 + i * 0.082
+        x0 = w * 0.5 + (s_ - 0.5) * w * 0.22
+        x1 = w * 0.5 + (s_ - 0.5) * w * 1.0
+        draw.line([(x0, horizon_y + 24), (x1, h)], fill=(132, 104, 66), width=4 + (i % 3) * 4)
+
+
+def _street_wall(draw, size, horizon_y, side, seed, style="street"):
     """Buildings lining one kerb, drawn far-to-near so nearer ones overlap."""
     rng = random.Random(seed)
     w, h = size
@@ -111,7 +134,9 @@ def _street_wall(draw, size, horizon_y, side, seed):
         lo, hi = min(x0, x1), max(x0, x1)
         # Facades run past the bottom edge so the road never shows through.
         shade = 60 - 42 * t
-        draw.rectangle([lo, top, hi, h + 100], fill=(int(shade + 10), int(shade), int(shade + 22)))
+        facade = ((int(shade + 26), int(shade + 6), int(shade)) if style == "canal"
+                  else (int(shade + 10), int(shade), int(shade + 22)))
+        draw.rectangle([lo, top, hi, h + 100], fill=facade)
         if i == 8:  # kerb lip, only on the nearest facade
             draw.line([(edge_x, edge_y), (edge_x, h + 100)], fill=(96, 78, 92), width=14)
 
@@ -124,7 +149,7 @@ def _street_wall(draw, size, horizon_y, side, seed):
                 if r < 0.30:
                     glow = (255, 186, 104) if r < 0.24 else (176, 208, 255)
                 elif r < 0.55:
-                    glow = (int(shade + 30), int(shade + 18), int(shade + 40))  # dark pane
+                    glow = tuple(c + 22 for c in facade)  # unlit pane
                 else:
                     continue
                 draw.rectangle([wx, wy, wx + wsz, wy + int(wsz * 1.5)], fill=glow)
@@ -167,8 +192,8 @@ def _vignette(img, strength=0.72):
     return Image.composite(img, Image.new("RGB", (w, h), (10, 8, 20)), mask)
 
 
-def paint(seed=7):
-    """Return the full-size backdrop image."""
+def paint(seed=7, style="street"):
+    """Return the full-size backdrop image. `style` is "street" or "canal"."""
     w, h = CANVAS
     horizon = int(h * HORIZON_T)
     rng = random.Random(seed)
@@ -190,9 +215,9 @@ def paint(seed=7):
     _skyline(d, w, horizon - 24, 420, (108, 76, 116), seed + 1)
     _clock_tower(d, w * 0.31, horizon - 6, 880, (52, 36, 68), (214, 180, 138))
     _skyline(d, w, horizon + 6, 620, (52, 36, 68), seed + 2, lit=0.26)
-    _road(d, CANVAS, horizon + 6)
-    _street_wall(d, CANVAS, horizon + 6, -1, seed + 3)
-    _street_wall(d, CANVAS, horizon + 6, +1, seed + 4)
+    (_canal if style == "canal" else _road)(d, CANVAS, horizon + 6)
+    _street_wall(d, CANVAS, horizon + 6, -1, seed + 3, style)
+    _street_wall(d, CANVAS, horizon + 6, +1, seed + 4, style)
 
     img = Image.blend(img, img.filter(ImageFilter.GaussianBlur(2.2)), 0.22)
     img = ImageChops.add(img, _bokeh(CANVAS, horizon, seed + 5))
@@ -212,4 +237,4 @@ def ken_burns(base, frame_size, t):
 
 
 if __name__ == "__main__":
-    paint().save("out/_bg_preview.jpg", quality=90)
+    paint(style="canal").save("out/_bg_preview.jpg", quality=90)

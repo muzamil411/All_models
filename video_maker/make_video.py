@@ -2,13 +2,12 @@
 
 Everything is generated locally: the backdrop and the avatar are painted with
 Pillow, the music bed is synthesised with numpy, and ffmpeg only muxes the
-result. Swap the JSON in content/ to make a video for another language.
+result. Pre-rendered voiceover clips named by the content file are mixed in.
+Swap the JSON in content/ to make a video for another language or topic.
 """
 import argparse
 import json
-import math
 import subprocess
-import sys
 from pathlib import Path
 
 import imageio_ffmpeg
@@ -25,10 +24,6 @@ FONT_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
 TEXT_X = 62
-BLOCK_TOP = 606
-PAIR_GAP = 214
-KNOWN_SIZE = 80
-TAUGHT_SIZE = 66
 KNOWN_COLOUR = (255, 205, 60)
 TAUGHT_COLOUR = (255, 255, 255)
 
@@ -37,14 +32,30 @@ BADGE_TOP = 210
 BAR_W, BAR_H = 300, 18
 BAR_TOP = BADGE_TOP + BADGE_H + 26
 
+CHAR_MAIN = {"width": 440, "cx": W - 440 // 2 - 44, "feet": H + 20}
+CHAR_OUTRO = {"width": 560, "cx": W // 2, "feet": H - 110}
+
 
 def ease_out(x):
     return 1 - (1 - max(0.0, min(1.0, x))) ** 3
 
 
+def lerp(a, b, t):
+    return a + (b - a) * t
+
+
 # --------------------------------------------------------------------------- text
 
-def text_layer(text, size, fill, glow=(0, 0, 0), glow_radius=14, glow_alpha=190):
+def layout_for(count):
+    """Type scale and spacing that fit `count` pairs into the frame."""
+    if count <= 5:
+        return {"top": 606, "gap": 214, "known": 80, "taught": 66, "drop": 92}
+    if count <= 8:
+        return {"top": 500, "gap": 172, "known": 70, "taught": 56, "drop": 78}
+    return {"top": 436, "gap": 144, "known": 62, "taught": 50, "drop": 68}
+
+
+def text_layer(text, size, fill, glow=(0, 0, 0), glow_radius=13, glow_alpha=200):
     """Render one line of text with a soft shadow so it stays legible on any frame."""
     font = ImageFont.truetype(FONT_BOLD, size)
     pad = glow_radius * 3
@@ -59,7 +70,7 @@ def text_layer(text, size, fill, glow=(0, 0, 0), glow_radius=14, glow_alpha=190)
     layer = Image.new("RGBA", (w, h), glow + (0,))
     layer.putalpha(shadow)
     ImageDraw.Draw(layer).text(origin, text, font=font, fill=fill + (255,))
-    return layer
+    return layer, pad
 
 
 def paste_faded(canvas, layer, xy, alpha):
@@ -91,7 +102,23 @@ def union_jack(size):
     return img.resize(size, Image.LANCZOS)
 
 
-def badge(size, radius=34):
+def tricolour_h(size, colours):
+    """Three equal horizontal bands - Germany, Netherlands, and friends."""
+    w, h = size
+    img = Image.new("RGB", size)
+    d = ImageDraw.Draw(img)
+    for i, c in enumerate(colours):
+        d.rectangle([0, h * i / 3, w, h * (i + 1) / 3], fill=c)
+    return img
+
+
+FLAGS = {
+    "uk": union_jack,
+    "de": lambda size: tricolour_h(size, [(0, 0, 0), (221, 0, 0), (255, 206, 0)]),
+}
+
+
+def badge(size, flag="uk", radius=34):
     """The flag on a rounded card with a drop shadow."""
     pad = 30
     canvas = Image.new("RGBA", (size[0] + pad * 2, size[1] + pad * 2), (0, 0, 0, 0))
@@ -104,9 +131,9 @@ def badge(size, radius=34):
 
     mask = Image.new("L", size, 0)
     ImageDraw.Draw(mask).rounded_rectangle([0, 0, size[0] - 1, size[1] - 1], radius=radius, fill=255)
-    flag = union_jack(size)
-    flag.putalpha(mask)
-    canvas.alpha_composite(flag, (pad, pad))
+    art = FLAGS[flag](size)
+    art.putalpha(mask)
+    canvas.alpha_composite(art, (pad, pad))
 
     ring = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     ImageDraw.Draw(ring).rounded_rectangle(
@@ -127,6 +154,20 @@ def progress_bar(fraction):
     return layer
 
 
+def bar_progress(content, t, first_beat, gap, outro_start):
+    """Where the pacing bar stands, or None when it should not be drawn.
+
+    With "beat_bar" it refills once per word and retires before the outro;
+    otherwise it fills once over "bar_seconds" and is gone."""
+    if content.get("beat_bar"):
+        if t >= outro_start - 0.4:
+            return None
+        return t / first_beat if t < first_beat else ((t - first_beat) % gap) / gap
+
+    life = content.get("bar_seconds", 0)
+    return t / life if 0 < t < life else None
+
+
 def scrim():
     """Darken the left column and the base of the frame so text always reads."""
     x = np.arange(W)[None, :]
@@ -141,7 +182,7 @@ def scrim():
     return Image.fromarray(rgba, "RGBA")
 
 
-# --------------------------------------------------------------------------- build
+# --------------------------------------------------------------------------- content
 
 def load_content(path):
     data = json.loads(Path(path).read_text())
@@ -150,54 +191,66 @@ def load_content(path):
     gap = data.get("reveal_gap", 3.6)
     data["reveals"] = [reveal_at + i * gap for i in range(len(pairs))]
     data["duration"] = data.get("duration", data["reveals"][-1] + gap)
+    # Without an outro the section never starts, so the list and the character stay put.
+    data.setdefault("outro_start", data["duration"] + 60)
+    data["layout"] = {**layout_for(len(pairs)), **data.get("layout", {})}
     data["voice_track"] = voice_track(data)
     return data
 
 
 def voice_track(data):
-    """Schedule the voiceover clips: the intro on its own beat, then one clip
-    per reveal, nudged slightly late so the word lands before it is spoken."""
+    """Schedule the voiceover: the intro, then per word an English cue just
+    before the reveal and the translation on it, then the closing line."""
     spec = data.get("voice")
     if not spec:
         return []
 
     here = Path(__file__).parent
     track = []
-    if spec.get("intro"):
-        track.append({"file": here / spec["intro"]["file"], "at": spec["intro"]["at"]})
+    for key, default_at in (("intro", 0.3), ("outro", data["outro_start"] + 0.6)):
+        if spec.get(key):
+            track.append({"file": here / spec[key]["file"], "at": spec[key].get("at", default_at)})
 
-    offset = spec.get("reveal_offset", 0.12)
+    cue_offset = spec.get("cue_offset", -1.2)
+    for reveal, name in zip(data["reveals"], spec.get("cues", [])):
+        track.append({"file": here / name, "at": max(0.0, reveal + cue_offset)})
+
+    offset = spec.get("reveal_offset", 0.0)
     for reveal, name in zip(data["reveals"], spec.get("files", [])):
         track.append({"file": here / name, "at": reveal + offset})
 
     missing = [str(c["file"]) for c in track if not c["file"].exists()]
     if missing:
         raise SystemExit("voiceover clips not found:\n  " + "\n  ".join(missing))
-    return track
+    return sorted(track, key=lambda c: c["at"])
 
+
+# --------------------------------------------------------------------------- render
 
 def render(content, out_path, preview_only=None):
     duration = content["duration"]
     total = int(duration * FPS)
     reveals = content["reveals"]
+    gap = content.get("reveal_gap", 3.6)
+    outro_start = content["outro_start"]
+    lay = content["layout"]
 
-    print(f"painting backdrop ...", flush=True)
-    base_bg = background.paint(seed=content.get("seed", 7))
+    print("painting backdrop ...", flush=True)
+    base_bg = background.paint(seed=content.get("seed", 7), style=content.get("style", "street"))
     veil = scrim()
-    badge_img, badge_pad = badge((BADGE_W, BADGE_H))
+    badge_img, badge_pad = badge((BADGE_W, BADGE_H), content.get("flag", "uk"))
     badge_xy = ((W - BADGE_W) // 2 - badge_pad, BADGE_TOP - badge_pad)
 
     print("drawing character poses ...", flush=True)
     character.loop_frames()
-    char_w = 520
-    char_h = int(char_w * character.SIZE[1] / character.SIZE[0])
-    char_xy = (W - char_w - 44, H - char_h + 26)
+    aspect = character.SIZE[1] / character.SIZE[0]
 
     print("laying out text ...", flush=True)
-    known = [text_layer(p[0], KNOWN_SIZE, KNOWN_COLOUR) for p in content["pairs"]]
-    taught = [text_layer(p[1], TAUGHT_SIZE, TAUGHT_COLOUR) for p in content["pairs"]]
+    known = [text_layer(p[0], lay["known"], KNOWN_COLOUR) for p in content["pairs"]]
+    taught = [text_layer(p[1], lay["taught"], TAUGHT_COLOUR) for p in content["pairs"]]
 
     frames = range(total) if preview_only is None else preview_only
+    proc = None
     if preview_only is None:
         proc = subprocess.Popen(
             [FFMPEG, "-y", "-loglevel", "error",
@@ -206,45 +259,53 @@ def render(content, out_path, preview_only=None):
              "-pix_fmt", "yuv420p", str(out_path)],
             stdin=subprocess.PIPE,
         )
-    else:
-        proc = None
+
+    first_beat = max(0.5, reveals[0] + content.get("voice", {}).get("cue_offset", -1.2))
 
     for i in frames:
         t = i / FPS
         canvas = background.ken_burns(base_bg, (W, H), t / duration).convert("RGBA")
         canvas.alpha_composite(veil)
 
-        # Badge, and the loading bar that fills over the opening beat.
         paste_faded(canvas, badge_img, badge_xy, ease_out(0.35 + t / 0.3))
-        bar_life = content.get("bar_seconds", 4.2)
-        if t < bar_life:
-            fade = min(1.0, (bar_life - t) / 0.5)
-            paste_faded(canvas, progress_bar(t / bar_life), ((W - BAR_W) // 2, BAR_TOP), fade)
 
-        # Word list: the known-language column slides in during the first beat.
-        for idx, layer in enumerate(known):
-            # Staggered but front-loaded, so frame 0 already works as a cover.
-            k = ease_out((0.30 + t - idx * 0.06) / 0.40)
-            y = BLOCK_TOP + idx * PAIR_GAP - 30 + 30 * k
-            paste_faded(canvas, layer, (TEXT_X - 26, y - 26), k)
+        frac = bar_progress(content, t, first_beat, gap, outro_start)
+        if frac is not None:
+            end = (outro_start - 0.4) if content.get("beat_bar") else content.get("bar_seconds", 0)
+            paste_faded(canvas, progress_bar(frac), ((W - BAR_W) // 2, BAR_TOP),
+                        min(1.0, (end - t) / 0.5))
 
-        # Each translation fades and slides up on its own beat.
-        for idx, layer in enumerate(taught):
-            k = ease_out((t - reveals[idx]) / 0.5)
-            y = BLOCK_TOP + idx * PAIR_GAP + 92 + 26 * (1 - k)
-            paste_faded(canvas, layer, (TEXT_X + 12, y - 26), k)
+        # The word list retires when the closing line starts.
+        list_alpha = 1.0 - ease_out((t - outro_start) / 0.7)
+        if list_alpha > 0.004:
+            for idx, (layer, pad) in enumerate(known):
+                k = ease_out((0.30 + t - idx * 0.05) / 0.40) * list_alpha
+                paste_faded(canvas, layer, (TEXT_X - pad, lay["top"] + idx * lay["gap"] - pad), k)
+            for idx, (layer, pad) in enumerate(taught):
+                k = ease_out((t - reveals[idx]) / 0.5)
+                y = lay["top"] + idx * lay["gap"] + lay["drop"] + 22 * (1 - k)
+                paste_faded(canvas, layer, (TEXT_X + 14 - pad, y - pad), k * list_alpha)
 
-        char = character.frame(i).resize((char_w, char_h), Image.LANCZOS)
-        paste_faded(canvas, char, char_xy, ease_out(0.4 + t / 0.5))
+        # The character walks to centre stage for the closing line.
+        move = ease_out((t - outro_start + 0.3) / 1.0)
+        cw = int(lerp(CHAR_MAIN["width"], CHAR_OUTRO["width"], move))
+        ch = int(cw * aspect)
+        cx = lerp(CHAR_MAIN["cx"], CHAR_OUTRO["cx"], move)
+        feet = lerp(CHAR_MAIN["feet"], CHAR_OUTRO["feet"], move)
+        char = character.frame(i).resize((cw, ch), Image.LANCZOS)
+        paste_faded(canvas, char, (cx - cw / 2, feet - ch), ease_out(0.4 + t / 0.5))
 
         if t < 0.4:  # lift out of black, but never to a fully black first frame
             k = 0.58 + 0.42 * ease_out(t / 0.4)
             canvas = Image.blend(Image.new("RGBA", (W, H), (0, 0, 0, 255)), canvas, k)
+        tail = duration - t
+        if tail < 0.6:
+            canvas = Image.blend(Image.new("RGBA", (W, H), (0, 0, 0, 255)), canvas, max(0.0, tail / 0.6))
 
         rgb = canvas.convert("RGB")
         if proc:
             proc.stdin.write(rgb.tobytes())
-            if i % 60 == 0:
+            if i % 120 == 0:
                 print(f"  frame {i}/{total}", flush=True)
         else:
             rgb.save(f"out/_preview_{i:04d}.jpg", quality=90)
@@ -258,7 +319,7 @@ def render(content, out_path, preview_only=None):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--content", default="content/english_in_seconds.json")
-    ap.add_argument("--out", default="out/english_in_seconds.mp4")
+    ap.add_argument("--out", default="out/video.mp4")
     ap.add_argument("--preview", help="comma-separated frame numbers; writes stills instead of video")
     args = ap.parse_args()
 
