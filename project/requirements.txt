@@ -1,0 +1,8 @@
+# Rendering pipeline. Python 3.9+ and an ffmpeg/ffprobe build on PATH.
+Pillow>=10.0
+numpy>=1.24
+
+# Only needed by scripts/build_fonts.py, to convert the woff2 files shipped by
+# @fontsource into the TTFs Pillow can load.
+fonttools>=4.40
+brotli>=1.0

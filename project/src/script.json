@@ -1,0 +1,29 @@
+{
+  "voice": {"name": "Ava - youthful and expressive German", "voice_id": "AnvlJBAqSLDzEevYr9Ap", "model_id": "eleven_multilingual_v2"},
+  "flows": {"audio": "Mca28qV5AG4R0EpA3oy6", "images": "8GkjheTMNeeNaRIRG23Y"},
+  "clips": [
+    {"id": "intro",  "kind": "intro", "text": "Ten German phrases you will actually use every single day. Let's learn them together!", "session_id": "OEXjSdaCY0N4WPX6BXNC"},
+    {"id": "en01", "kind": "en", "n": 1,  "text": "Good morning.",            "session_id": "v2GWZv5Cd3BwhxhFSIGh"},
+    {"id": "de01", "kind": "de", "n": 1,  "text": "Guten Morgen.",           "session_id": "MhiNBupKwiTpVd7Ia1DK"},
+    {"id": "en02", "kind": "en", "n": 2,  "text": "How are you?",            "session_id": "SBmuRRZCa4JIXBRg3YLn"},
+    {"id": "de02", "kind": "de", "n": 2,  "text": "Wie geht's dir?",         "session_id": "ybKtx2RVQqhZQB9rY1Cx"},
+    {"id": "en03", "kind": "en", "n": 3,  "text": "I'm doing well.",         "session_id": "G5LyBsTrdUJ12WhLp6aC"},
+    {"id": "de03", "kind": "de", "n": 3,  "text": "Mir geht's gut.",         "session_id": "tK6O3dBRS2VCbgxA9jet"},
+    {"id": "en04", "kind": "en", "n": 4,  "text": "What are you doing?",     "session_id": "trftYXGQx4UdiBoB5U9N"},
+    {"id": "de04", "kind": "de", "n": 4,  "text": "Was machst du?",          "session_id": "C2ETIx4MthrF0zUFBRNT"},
+    {"id": "en05", "kind": "en", "n": 5,  "text": "Where do you live?",      "session_id": "mb6P2ZrTSTdpAzrfs2RQ"},
+    {"id": "de05", "kind": "de", "n": 5,  "text": "Wo wohnst du?",           "session_id": "6uGadfiWYE1T2pA8AAsa"},
+    {"id": "en06", "kind": "en", "n": 6,  "text": "I'm from Pakistan.",      "session_id": "zPItqOwHLVqAmPxJy8FT"},
+    {"id": "de06", "kind": "de", "n": 6,  "text": "Ich komme aus Pakistan.", "session_id": "sQinc0vLliH7cM8hfi0g"},
+    {"id": "en07", "kind": "en", "n": 7,  "text": "How much does it cost?",  "session_id": "hiAfPLiMqXNxOX0zZs5x"},
+    {"id": "de07", "kind": "de", "n": 7,  "text": "Wie viel kostet das?",    "session_id": "aolDvMQt5Sss0O6bKqo4"},
+    {"id": "en08", "kind": "en", "n": 8,  "text": "I don't understand.",     "session_id": "whhP2CHDcQEHWhJgSbrL"},
+    {"id": "de08", "kind": "de", "n": 8,  "text": "Ich verstehe das nicht.", "session_id": "OAJ8nDcD4wYk5cN02ddq"},
+    {"id": "en09", "kind": "en", "n": 9,  "text": "Can you help me?",        "session_id": "lQt2MyJf7r3bdCZIBXHG"},
+    {"id": "de09", "kind": "de", "n": 9,  "text": "Kannst du mir helfen?",   "session_id": "JjBiQJkR29MljSTk5dwk"},
+    {"id": "en10", "kind": "en", "n": 10, "text": "See you tomorrow.",       "session_id": "4fI9j7Ulc7xoz2JMq0Rm"},
+    {"id": "de10", "kind": "de", "n": 10, "text": "Bis morgen.",             "session_id": "SZLPYlY3ivt64q9xnjAJ"},
+    {"id": "outro1", "kind": "outro", "text": "Save this video and practice your German every day!", "session_id": "l8FxPMHo15YFwXjEhZ3P"},
+    {"id": "outro2", "kind": "outro", "text": "Follow for more German!",     "session_id": "2q7gg7ZuReQBLnHb9bHW"}
+  ]
+}
